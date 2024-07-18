@@ -17,11 +17,12 @@ import (
 )
 
 type image struct {
-	base               v1.Image
-	overrides          []v1.Layer
-	history            *v1.History
-	configFileOverride any
-	configTypeOverride types.MediaType
+	base                 v1.Image
+	overrides            []v1.Layer
+	history              *v1.History
+	configFileOverride   any
+	configTypeOverride   types.MediaType
+	manifestTypeOverride types.MediaType
 
 	computed      bool
 	diffIDs       []v1.Hash
@@ -121,28 +122,16 @@ func (img *image) populate() error {
 	}
 
 	// Populate raw config.
-	var config []byte
-
-	if configFile != nil {
-		b, err := json.Marshal(configFile)
-		if err != nil {
-			return err
-		}
-
-		config = b
-	} else {
-		b, err := img.base.RawConfigFile()
-		if err != nil {
-			return err
-		}
-
-		config = b
+	config, err := img.computeConfig(configFile)
+	if err != nil {
+		return err
 	}
 
 	digest, size, err := v1.SHA256(bytes.NewBuffer(config))
 	if err != nil {
 		return err
 	}
+
 	manifest.Config.MediaType = configType
 	manifest.Config.Digest = digest
 	manifest.Config.Size = size
@@ -150,6 +139,12 @@ func (img *image) populate() error {
 	if manifest.Config.Data != nil {
 		manifest.Config.Data = config
 	}
+
+	if err := img.computeMediaType(); err != nil {
+		return err
+	}
+
+	manifest.MediaType = img.manifestTypeOverride
 
 	img.computed = true
 	img.diffIDs = diffIDs
@@ -162,9 +157,33 @@ func (img *image) populate() error {
 	return nil
 }
 
+func (img *image) computeMediaType() error {
+	// if mediaTypeOverride is empty, populate it from the base image.
+	if img.manifestTypeOverride == "" {
+		mt, err := img.base.MediaType()
+		if err != nil {
+			return err
+		}
+		img.manifestTypeOverride = mt
+	}
+	return nil
+}
+
+func (img *image) computeConfig(configFile any) ([]byte, error) {
+	// if configFile is set, json marshal it to bytes
+	if configFile != nil {
+		return json.Marshal(configFile)
+	}
+
+	return img.base.RawConfigFile()
+}
+
 // MediaType of this image's manifest.
 func (img *image) MediaType() (types.MediaType, error) {
-	return img.base.MediaType()
+	if err := img.populate(); err != nil {
+		return "", err
+	}
+	return img.manifestTypeOverride, nil
 }
 
 // Size returns the size of the manifest.

@@ -54,6 +54,14 @@ func SetConfig(configFile any, configType types.MediaType) Mutation {
 	}
 }
 
+// SetManifestMediaType replaces the manifest with the specified raw content of type t.
+func SetManifestMediaType(mt types.MediaType) Mutation {
+	return func(img *image) error {
+		img.manifestTypeOverride = mt
+		return nil
+	}
+}
+
 // Apply performs the specified mutation(s) to a base image, returning the resulting image.
 func Apply(base v1.Image, ms ...Mutation) (v1.Image, error) {
 	if len(ms) == 0 {

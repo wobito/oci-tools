@@ -26,7 +26,7 @@ func testHash(tb testing.TB, hash string) v1.Hash {
 	return h
 }
 
-func Test_image_populate(t *testing.T) { //nolint:gocognit
+func Test_image_populate(t *testing.T) { //nolint:gocognit,maintidx
 	img := corpus.Image(t, "hello-world-docker-v2-manifest")
 
 	tests := []struct {
@@ -118,6 +118,21 @@ func Test_image_populate(t *testing.T) { //nolint:gocognit
 			wantSize:        424,
 			wantDigest:      testHash(t, "b44f9c2b2a0d66ec3cdc16306d00264337365f338e6146689622faee27160f14"),
 			wantConfigName:  testHash(t, "504a39d1f5444559ddacac51de4ddd94f20e1021719567a159cc9188a316e6ea"),
+			wantLayers:      1,
+			wantLayerDigest: testHash(t, "7050e35b49f5e348c4809f5eff915842962cb813f32062d3bbdd35c750dd7d01"),
+			wantLayerDiffID: testHash(t, "efb53921da3394806160641b72a2cbd34ca1a9a8345ac670a85a04ad3d0e3507"),
+		},
+		{
+			name: "Manifest",
+			img: &image{
+				base:                 img,
+				overrides:            make([]v1.Layer, 1),
+				manifestTypeOverride: types.OCIManifestSchema1,
+			},
+			wantMediaType:   types.OCIManifestSchema1,
+			wantSize:        414,
+			wantDigest:      testHash(t, "b3e2b91d48b6f6363604c59927c6bc78cda0121ee87d78e665eaff1ec7e14ef8"),
+			wantConfigName:  testHash(t, "93ad81f8071afb1a00ef481a6034c0bf59a18bc2e1fba8bceceecb0acf2bddc3"),
 			wantLayers:      1,
 			wantLayerDigest: testHash(t, "7050e35b49f5e348c4809f5eff915842962cb813f32062d3bbdd35c750dd7d01"),
 			wantLayerDiffID: testHash(t, "efb53921da3394806160641b72a2cbd34ca1a9a8345ac670a85a04ad3d0e3507"),
